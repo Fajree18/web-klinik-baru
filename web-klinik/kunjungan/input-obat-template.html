@@ -1,0 +1,19 @@
+<div class="row mb-2">
+    <div class="col-md-8">
+        <select name="obat[__INDEX__]" class="form-control" required>
+            <option value="">-- Pilih Obat --</option>
+            <?php
+            include "../koneksi.php";
+            $obat = mysqli_query($conn, "SELECT id_obat, nama_obat, stok FROM obat ORDER BY nama_obat ASC");
+            while($o = mysqli_fetch_assoc($obat)):
+            ?>
+            <option value="<?= $o['id_obat'] ?>">
+                <?= htmlspecialchars($o['nama_obat']) ?> (Stok: <?= $o['stok'] ?>)
+            </option>
+            <?php endwhile; ?>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <input type="number" name="jumlah[__INDEX__]" class="form-control" placeholder="Jumlah" min="1" required>
+    </div>
+</div>
