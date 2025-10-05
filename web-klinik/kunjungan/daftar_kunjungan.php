@@ -17,11 +17,26 @@ $allowed_sorts = [
 $sort_key = $_GET['sort_by'] ?? 'tanggal';
 $sort_column = $allowed_sorts[$sort_key] ?? $allowed_sorts['tanggal'];
 
-$kunjungan = mysqli_query($conn, "SELECT 
-        k.id_kunjungan,k.tanggal_kunjungan,k.keluhan,k.diagnosa,k.tindakan,k.istirahat,k.status_kunjungan,p.nama,p.no_rm
+// Pagination
+$per_page = 20;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $per_page;
+
+// Hitung total data
+$count_result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM kunjungan");
+$total_rows = mysqli_fetch_assoc($count_result)['total'];
+$total_pages = ceil($total_rows / $per_page);
+
+// Query data dengan limit dan offset
+$kunjungan = mysqli_query($conn, "
+    SELECT 
+        k.id_kunjungan, k.tanggal_kunjungan, k.keluhan, k.diagnosa, 
+        k.tindakan, k.istirahat, k.status_kunjungan, p.nama, p.no_rm
     FROM kunjungan k
     JOIN pasien p ON p.id_pasien = k.id_pasien
     ORDER BY $sort_column DESC
+    LIMIT $per_page OFFSET $offset
 ");
 ?>
 <!DOCTYPE html>
@@ -107,6 +122,23 @@ $kunjungan = mysqli_query($conn, "SELECT
         <?php endwhile; ?>
     </tbody>
 </table>
+
+<!-- Pagination -->
+<nav aria-label="Pagination" class="mt-3">
+    <ul class="pagination">
+        <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page - 1 ?>&sort_by=<?= urlencode($sort_key) ?>">« Sebelumnya</a>
+        </li>
+        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+            <li class="page-item <?= $page == $i ? 'active' : '' ?>">
+                <a class="page-link" href="?page=<?= $i ?>&sort_by=<?= urlencode($sort_key) ?>"><?= $i ?></a>
+            </li>
+        <?php endfor; ?>
+        <li class="page-item <?= $page >= $total_pages ? 'disabled' : '' ?>">
+            <a class="page-link" href="?page=<?= $page + 1 ?>&sort_by=<?= urlencode($sort_key) ?>">Berikutnya »</a>
+        </li>
+    </ul>
+</nav>
 
 <a href="../dashboard.php" class="btn btn-secondary btn-sm mt-3">Kembali ke Dashboard</a>
 

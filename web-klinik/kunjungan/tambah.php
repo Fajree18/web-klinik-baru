@@ -15,6 +15,17 @@ $obat = mysqli_query($conn, "SELECT kode_obat, nama_obat, stok FROM obat ORDER B
     <title>Input Kunjungan Pasien</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <style>
+        body { font-size: 14px; }
+        .resep-row .form-control { font-size: 13px; }
+        .resep-row .btn-remove {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+        }
+    </style>
 </head>
 <body class="container mt-4">
 
@@ -78,10 +89,11 @@ $obat = mysqli_query($conn, "SELECT kode_obat, nama_obat, stok FROM obat ORDER B
         <input type="number" name="istirahat" id="istirahat" class="form-control" min="0" required>
     </div>
 
+    <!-- Bagian Resep Obat -->
     <div class="mb-3">
         <label>Resep Obat</label>
         <div id="resep-obat">
-            <div class="row mb-2 align-items-end">
+            <div class="row g-2 mb-2 align-items-center resep-row">
                 <div class="col-md-4">
                     <select name="obat[]" class="form-control" required>
                         <option value="">-- Pilih Obat --</option>
@@ -90,16 +102,20 @@ $obat = mysqli_query($conn, "SELECT kode_obat, nama_obat, stok FROM obat ORDER B
                         <?php endwhile; ?>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <input type="text" name="dosis[]" class="form-control" placeholder="Contoh: Paracetamol 500mg" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <input type="number" name="jumlah[]" class="form-control" placeholder="Jumlah" min="1" required>
+                </div>
+                <div class="col-md-2 d-flex justify-content-center">
+                    <button type="button" class="btn btn-outline-danger btn-remove" onclick="hapusObat(this)">✕</button>
                 </div>
             </div>
         </div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="tambahObat()">+ Tambah Obat</button>
+        <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="tambahObat()">+ Tambah Obat</button>
     </div>
+    <!-- end resep -->
 
     <button type="submit" class="btn btn-success">Simpan Kunjungan</button>
     <a href="../dashboard.php" class="btn btn-secondary ms-2">Kembali ke Dashboard</a>
@@ -139,10 +155,22 @@ function tampilkanHistori(id_pasien) {
 }
 
 function tambahObat() {
-    const resep = document.querySelector('#resep-obat .row.mb-2');
-    const clone = resep.cloneNode(true);
+    const resepContainer = document.getElementById('resep-obat');
+    const firstRow = resepContainer.querySelector('.resep-row');
+    const clone = firstRow.cloneNode(true);
+
+    // Reset semua input/select di baris baru
     clone.querySelectorAll('input, select').forEach(el => el.value = '');
-    document.getElementById('resep-obat').appendChild(clone);
+    resepContainer.appendChild(clone);
+}
+
+function hapusObat(btn) {
+    const allRows = document.querySelectorAll('#resep-obat .resep-row');
+    if (allRows.length > 1) {
+        btn.closest('.resep-row').remove();
+    } else {
+        alert("Minimal harus ada satu resep obat!");
+    }
 }
 
 function cekCheckbox(clicked) {

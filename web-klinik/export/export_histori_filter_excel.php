@@ -1,72 +1,90 @@
 <?php
 include "../koneksi.php";
 
+
+$tgl_awal = $_GET['tanggal_awal'] ?? '';
+$tgl_akhir = $_GET['tanggal_akhir'] ?? '';
+
+if (!$tgl_awal || !$tgl_akhir) {
+    die("Tanggal filter tidak valid.");
+}
+
+
+$filename = "Data_Kunjungan_{$tgl_awal}_sd_{$tgl_akhir}.xls";
+
 header("Content-Type: application/vnd.ms-excel");
-header("Content-Disposition: attachment; filename=Eksport by Filter.xls");
+header("Content-Disposition: attachment; filename=\"$filename\"");
+header("Pragma: no-cache");
+header("Expires: 0");
 
-$departemen = isset($_GET['departemen']) ? mysqli_real_escape_string($conn, $_GET['departemen']) : '';
-$diagnosa = isset($_GET['diagnosa']) ? mysqli_real_escape_string($conn, $_GET['diagnosa']) : '';
+$query = "SELECT 
+        k.id_kunjungan,
+        k.tanggal_kunjungan,
+        k.keluhan,
+        k.diagnosa,
+        k.tindakan,
+        k.istirahat,
+        k.status_kunjungan,
+        p.nama,
+        p.no_rm
+    FROM kunjungan k
+    JOIN pasien p ON p.id_pasien = k.id_pasien
+    WHERE DATE(k.tanggal_kunjungan) BETWEEN '$tgl_awal' AND '$tgl_akhir'
+    ORDER BY k.tanggal_kunjungan ASC
+";
 
-$where = "WHERE 1";
-if ($departemen !== '') {
-    $where .= " AND p.departemen = '$departemen'";
+$result = mysqli_query($conn, $query);
+
+echo "<table border='1'>";
+echo "<tr style='background:#e0e0e0; font-weight:bold;'>
+        <th>No</th>
+        <th>Tanggal</th>
+        <th>Jam</th>
+        <th>No RM</th>
+        <th>Nama Pasien</th>
+        <th>Keluhan</th>
+        <th>Diagnosa</th>
+        <th>Tindakan</th>
+        <th>Istirahat (hari)</th>
+        <th>Status</th>
+        <th>Obat & Dosis</th>
+      </tr>";
+
+$no = 1;
+while ($row = mysqli_fetch_assoc($result)) {
+    $id_kunjungan = $row['id_kunjungan'];
+
+ 
+    $tanggal = date('d-m-Y', strtotime($row['tanggal_kunjungan']));
+    $jam = date('H:i:s', strtotime($row['tanggal_kunjungan']));
+
+ 
+    $resep_query = mysqli_query($conn, "SELECT o.nama_obat, r.dosis, r.jumlah
+        FROM resep r
+        JOIN obat o ON o.kode_obat = r.kode_obat
+        WHERE r.id_kunjungan = '$id_kunjungan'
+    ");
+
+    $resep_list = [];
+    while ($r = mysqli_fetch_assoc($resep_query)) {
+        $resep_list[] = htmlspecialchars($r['nama_obat']) . " (" . htmlspecialchars($r['dosis']) . ")";
+    }
+    $resep_str = implode(", ", $resep_list);
+
+    echo "<tr>
+            <td>{$no}</td>
+            <td>{$tanggal}</td>
+            <td>{$jam}</td>
+            <td>" . htmlspecialchars($row['no_rm']) . "</td>
+            <td>" . htmlspecialchars($row['nama']) . "</td>
+            <td>" . htmlspecialchars($row['keluhan']) . "</td>
+            <td>" . htmlspecialchars($row['diagnosa']) . "</td>
+            <td>" . htmlspecialchars($row['tindakan']) . "</td>
+            <td>" . (int)$row['istirahat'] . "</td>
+            <td>" . ucfirst(htmlspecialchars($row['status_kunjungan'])) . "</td>
+            <td>{$resep_str}</td>
+          </tr>";
+    $no++;
 }
-if ($diagnosa !== '') {
-    $where .= " AND k.diagnosa LIKE '%$diagnosa%'";
-}
-
-$query = mysqli_query($conn, "SELECT k.tanggal_kunjungan, p.id_pasien, p.no_rm, p.nama, p.departemen, p.jabatan, k.diagnosa, k.tindakan, k.istirahat, k.id_kunjungan FROM kunjungan k JOIN pasien p ON p.id_pasien = k.id_pasien $where ORDER BY k.diagnosa ASC
-");
-
-?>
-
-<table border="1">
-    <thead>
-        <tr>
-            <th>No RM</th>
-            <th>NIK</th>
-            <th>Nama Pasien</th>
-            <th>Departemen</th>
-            <th>Jabatan</th>
-            <th>Diagnosa</th>
-            <th>Tindakan</th>
-            <th>Obat Diberikan</th>
-            <th>Lama Istirahat (Hari)</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php while ($row = mysqli_fetch_assoc($query)): ?>
-        <tr>
-            <td><?= $row['no_rm'] ?></td>
-            <td><?= $row['id_pasien'] ?></td>
-            <td><?= $row['nama'] ?></td>
-            <td><?= $row['departemen'] ?></td>
-            <td><?= $row['jabatan'] ?></td>
-            <td><?= $row['diagnosa'] ?></td>
-            <td><?= $row['tindakan'] ?></td>
-            <td>
-                <?php
-                    // Ambil obat yang diberikan berdasarkan ID kunjungan
-                    $id_kunjungan = $row['id_kunjungan'];
-                    $obat_q = mysqli_query($conn, "
-                        SELECT o.nama_obat, r.jumlah
-                        FROM resep r
-                        JOIN obat o ON o.kode_obat = r.kode_obat
-                        WHERE r.id_kunjungan = $id_kunjungan
-                    ");
-                    $obat_list = [];
-                    while ($obat = mysqli_fetch_assoc($obat_q)) {
-                        $obat_list[] = $obat['nama_obat'] . " (" . $obat['jumlah'] . ")";
-                    }
-                    echo implode(", ", $obat_list);
-                ?>
-            </td>
-            <td><?= $row['istirahat'] ?> hari</td>
-        </tr>
-        <?php endwhile; ?>
-    </tbody>
-</table>
-
-<?php
-exit;
+echo "</table>";
 ?>
