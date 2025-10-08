@@ -26,8 +26,7 @@ echo "<table border='1'>
 </tr>
 </thead><tbody>";
 
-$query = mysqli_query($conn, "
-    SELECT p.no_rm, p.id_pasien, p.nama, p.departemen, p.jabatan,
+$query = mysqli_query($conn, "SELECT p.no_rm, p.id_pasien, p.nama, p.departemen, p.jabatan,
            k.keluhan, k.diagnosa, k.tindakan, k.istirahat,
            k.tanggal_kunjungan, k.status_kunjungan, k.id_kunjungan
     FROM kunjungan k

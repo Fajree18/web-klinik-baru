@@ -1,7 +1,7 @@
 <?php
 include "../koneksi.php";
 
-
+// ambil tanggal dari form
 $tgl_awal = $_GET['tanggal_awal'] ?? '';
 $tgl_akhir = $_GET['tanggal_akhir'] ?? '';
 
@@ -9,14 +9,16 @@ if (!$tgl_awal || !$tgl_akhir) {
     die("Tanggal filter tidak valid.");
 }
 
-
+// nama file hasil export
 $filename = "Data_Kunjungan_{$tgl_awal}_sd_{$tgl_akhir}.xls";
 
+// set header agar langsung terdownload sebagai Excel
 header("Content-Type: application/vnd.ms-excel");
 header("Content-Disposition: attachment; filename=\"$filename\"");
 header("Pragma: no-cache");
 header("Expires: 0");
 
+// query data kunjungan berdasarkan range tanggal
 $query = "SELECT 
         k.id_kunjungan,
         k.tanggal_kunjungan,
@@ -26,7 +28,8 @@ $query = "SELECT
         k.istirahat,
         k.status_kunjungan,
         p.nama,
-        p.no_rm
+        p.no_rm,
+        p.departemen
     FROM kunjungan k
     JOIN pasien p ON p.id_pasien = k.id_pasien
     WHERE DATE(k.tanggal_kunjungan) BETWEEN '$tgl_awal' AND '$tgl_akhir'
@@ -35,6 +38,7 @@ $query = "SELECT
 
 $result = mysqli_query($conn, $query);
 
+// header tabel excel
 echo "<table border='1'>";
 echo "<tr style='background:#e0e0e0; font-weight:bold;'>
         <th>No</th>
@@ -42,6 +46,7 @@ echo "<tr style='background:#e0e0e0; font-weight:bold;'>
         <th>Jam</th>
         <th>No RM</th>
         <th>Nama Pasien</th>
+        <th>Departemen</th>
         <th>Keluhan</th>
         <th>Diagnosa</th>
         <th>Tindakan</th>
@@ -54,12 +59,13 @@ $no = 1;
 while ($row = mysqli_fetch_assoc($result)) {
     $id_kunjungan = $row['id_kunjungan'];
 
- 
+    // pisahkan tanggal dan jam
     $tanggal = date('d-m-Y', strtotime($row['tanggal_kunjungan']));
     $jam = date('H:i:s', strtotime($row['tanggal_kunjungan']));
 
- 
-    $resep_query = mysqli_query($conn, "SELECT o.nama_obat, r.dosis, r.jumlah
+    // ambil resep obat per kunjungan
+    $resep_query = mysqli_query($conn, "
+        SELECT o.nama_obat, r.dosis, r.jumlah
         FROM resep r
         JOIN obat o ON o.kode_obat = r.kode_obat
         WHERE r.id_kunjungan = '$id_kunjungan'
@@ -77,6 +83,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             <td>{$jam}</td>
             <td>" . htmlspecialchars($row['no_rm']) . "</td>
             <td>" . htmlspecialchars($row['nama']) . "</td>
+            <td>" . htmlspecialchars($row['departemen']) . "</td>
             <td>" . htmlspecialchars($row['keluhan']) . "</td>
             <td>" . htmlspecialchars($row['diagnosa']) . "</td>
             <td>" . htmlspecialchars($row['tindakan']) . "</td>
