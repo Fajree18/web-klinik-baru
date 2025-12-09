@@ -127,13 +127,13 @@ $obat = mysqli_query($conn, "SELECT kode_obat, nama_obat, stok FROM obat ORDER B
 <div id="riwayat_pasien" class="mt-3"></div>
 
 <script>
-function isiRM(select) {
-    const rm = select.options[select.selectedIndex].getAttribute('data-rm');
-    document.getElementById('no_rm').value = rm || '';
+    function isiRM(select) {
+        const rm = select.options[select.selectedIndex].getAttribute('data-rm');
+        document.getElementById('no_rm').value = rm || '';
 
-    const id_pasien = select.value;
-    tampilkanHistori(id_pasien);
-}
+        const id_pasien = select.value;
+        tampilkanHistori(id_pasien);
+    }
 
 function isiDariBarcode(code) {
     const [nik] = code.split("|");

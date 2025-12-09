@@ -18,7 +18,7 @@ if (isset($_POST['simpan'])) {
     $riwayat = mysqli_real_escape_string($conn, $_POST['riwayat_sakit']);
     $telepon = mysqli_real_escape_string($conn, $_POST['telepon']);
 
-    // Validasi NIK tidak boleh sama dengan pasien lain
+    // Validasi ID unik
     $cek = mysqli_query($conn, "SELECT * FROM pasien WHERE id_pasien = '$id_pasien_baru' AND id_pasien != '$id'");
     if (mysqli_num_rows($cek) > 0) {
         echo "<script>alert('ID Pasien / NIK sudah digunakan oleh pasien lain.'); window.location='edit_pasien.php?id=$id';</script>";
@@ -38,6 +38,7 @@ if (isset($_POST['simpan'])) {
         WHERE id_pasien = '$id'");
 
     header("Location: daftar_pasien.php");
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -47,8 +48,9 @@ if (isset($_POST['simpan'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="container mt-4">
+
 <h4>Edit Data Pasien</h4>
-<form method="POST">
+<form method="POST" enctype="multipart/form-data" class="mb-4">
     <div class="mb-2">
         <label>ID Pasien (NIK)</label>
         <input name="id_pasien" class="form-control" value="<?= $data['id_pasien'] ?>" required>
@@ -99,8 +101,83 @@ if (isset($_POST['simpan'])) {
         <label>No. Telepon</label>
         <input name="telepon" class="form-control" value="<?= $data['telepon'] ?>">
     </div>
+
     <button name="simpan" class="btn btn-success">Simpan Perubahan</button>
     <a href="daftar_pasien.php" class="btn btn-secondary ms-2">Batal</a>
 </form>
+
+<!-- === Bagian MCU multi-upload (terpisah dari form utama) === -->
+<div class="card mt-4 shadow-sm">
+  <div class="card-header bg-light">
+    <h6 class="mb-0 fw-bold">📋 File MCU (Medical Check-Up)</h6>
+  </div>
+  <div class="card-body">
+    <?php
+    $mcu_list = mysqli_query($conn, "SELECT * FROM pasien_mcu WHERE id_pasien='$id' ORDER BY tahun DESC");
+    if (mysqli_num_rows($mcu_list) > 0): ?>
+        <div class="table-responsive mb-3">
+            <table class="table table-bordered align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr class="text-center">
+                        <th width="80">Tahun</th>
+                        <th>File MCU</th>
+                        <th width="180">Tanggal Upload</th>
+                        <th width="100">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while($m = mysqli_fetch_assoc($mcu_list)): ?>
+                        <tr>
+                            <td class="text-center"><?= htmlspecialchars($m['tahun']) ?></td>
+                            <td>
+                                <a href="../uploads/mcu/<?= htmlspecialchars($m['file_mcu']) ?>" target="_blank" class="text-decoration-none">
+                                    📄 <?= htmlspecialchars($m['file_mcu']) ?>
+                                </a>
+                            </td>
+                            <td class="text-center"><?= date('d M Y H:i', strtotime($m['tanggal_upload'])) ?></td>
+                            <td class="text-center">
+                                <a href="hapus_mcu_multi.php?id=<?= $m['id_mcu'] ?>" 
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Yakin hapus file MCU ini?')">
+                                   Hapus
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <p class="text-muted mb-3">Belum ada file MCU yang diupload untuk pasien ini.</p>
+    <?php endif; ?>
+
+    <!-- Form upload MCU (terpisah) -->
+    <form action="upload_mcu_multi.php" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="id_pasien" value="<?= $data['id_pasien'] ?>">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label mb-1">Tahun MCU</label>
+                <input type="number" name="tahun" class="form-control" 
+                       min="2000" max="<?= date('Y') ?>" value="<?= date('Y') ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label mb-1">Upload File PDF</label>
+                <input type="file" name="file_mcu" accept="application/pdf" class="form-control" required>
+            </div>
+            <div class="col-md-3 d-grid">
+                <label class="form-label mb-1 invisible">Upload</label>
+                <button type="submit" class="btn btn-primary">
+                    📤 Upload MCU
+                </button>
+            </div>
+        </div>
+        <p class="text-muted small mt-2 mb-0">
+            * Hanya file <strong>PDF</strong> yang diperbolehkan. 
+            File MCU baru akan disimpan tanpa menimpa file sebelumnya.
+        </p>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>
