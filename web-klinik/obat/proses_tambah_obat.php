@@ -6,42 +6,42 @@ if (!isset($_SESSION['admin'])) {
 }
 include "../koneksi.php";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $kode_obat = mysqli_real_escape_string($conn, $_POST['kode_obat']);
-    $nama_obat = mysqli_real_escape_string($conn, $_POST['nama_obat']);
-    $satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
-    $stok = (int)$_POST['stok'];
-    $tanggal_kadaluarsa = mysqli_real_escape_string($conn, $_POST['tanggal_kadaluarsa']);
-    $tanggal = date('Y-m-d H:i:s');
+// --- Ambil data dari form ---
+$kode_obat = mysqli_real_escape_string($conn, $_POST['kode_obat']);
+$nama_obat = mysqli_real_escape_string($conn, $_POST['nama_obat']);
+$satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
+$stok = (int) $_POST['stok'];
+$stok_minimum = (int) $_POST['stok_minimum'];
+$tanggal_kadaluarsa = mysqli_real_escape_string($conn, $_POST['tanggal_kadaluarsa']);
 
-    
-    $cek = mysqli_query($conn, "SELECT * FROM obat WHERE kode_obat = '$kode_obat'");
-    if (mysqli_num_rows($cek) > 0) {
-       
-        $row = mysqli_fetch_assoc($cek);
-        $stok_baru = $row['stok'] + $stok;
-        $update = mysqli_query($conn, "UPDATE obat SET nama_obat='$nama_obat', satuan='$satuan', stok=$stok_baru, tanggal_kadaluarsa='$tanggal_kadaluarsa' WHERE kode_obat='$kode_obat'");
-        if ($update) {
-           
-            mysqli_query($conn, "INSERT INTO stok_log (kode_obat, tipe, jumlah, tanggal) VALUES ('$kode_obat', 'masuk', $stok, '$tanggal')");
-            $_SESSION['message'] = "Obat sudah ada. Stok berhasil diperbarui.";
-        } else {
-            $_SESSION['message'] = "Gagal memperbarui stok obat.";
-        }
-    } else {
-        
-        $insert = mysqli_query($conn, "INSERT INTO obat (kode_obat, nama_obat, satuan, stok, tanggal_kadaluarsa) VALUES ('$kode_obat', '$nama_obat', '$satuan', $stok, '$tanggal_kadaluarsa')");
-        if ($insert) {
-            mysqli_query($conn, "INSERT INTO stok_log (kode_obat, tipe, jumlah, tanggal) VALUES ('$kode_obat', 'masuk', $stok, '$tanggal')");
-            $_SESSION['message'] = "Obat berhasil ditambahkan.";
-        } else {
-            $_SESSION['message'] = "Gagal menambahkan obat.";
-        }
-    }
-} else {
-    $_SESSION['message'] = "Metode request tidak valid.";
+// --- Validasi dasar ---
+if (empty($kode_obat) || empty($nama_obat) || empty($satuan) || empty($tanggal_kadaluarsa)) {
+    echo "<script>alert('Semua field wajib diisi.'); history.back();</script>";
+    exit;
 }
 
-header("Location: tambah.php");
-exit;
+// --- Cek duplikat kode obat ---
+$cek = mysqli_query($conn, "SELECT * FROM obat WHERE kode_obat = '$kode_obat'");
+if (mysqli_num_rows($cek) > 0) {
+    echo "<script>alert('Kode obat sudah terdaftar!'); history.back();</script>";
+    exit;
+}
+
+// --- Simpan ke database ---
+$query = "
+    INSERT INTO obat (kode_obat, nama_obat, satuan, stok, stok_minimum, tanggal_kadaluarsa, created_at)
+    VALUES ('$kode_obat', '$nama_obat', '$satuan', '$stok', '$stok_minimum', '$tanggal_kadaluarsa', NOW())
+";
+
+if (mysqli_query($conn, $query)) {
+    echo "<script>
+        alert('Data obat berhasil disimpan.');
+        window.location = 'daftar_obat.php';
+    </script>";
+} else {
+    echo "<script>
+        alert('Gagal menyimpan data: " . mysqli_error($conn) . "');
+        history.back();
+    </script>";
+}
 ?>
