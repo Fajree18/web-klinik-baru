@@ -53,6 +53,10 @@ echo '
       <div class="col-md-6">
         <strong>Umur:</strong><br>' . $umur . '
       </div>
+      <div class="col-md-6">
+        <strong>No. Telepon:</strong><br>' . 
+        (!empty($pasien['telepon']) ? htmlspecialchars($pasien['telepon']) : '-') . '
+      </div>
       <div class="col-12">
         <strong>Riwayat Sakit:</strong><br>' . 
         (!empty($pasien['riwayat_sakit']) ? nl2br(htmlspecialchars($pasien['riwayat_sakit'])) : '-') . '
@@ -61,7 +65,6 @@ echo '
   </div>
 </div>
 ';
-
 
 // ======================== RIWAYAT KUNJUNGAN =============================
 $kunjungan = mysqli_query($conn, "
