@@ -51,6 +51,8 @@ $riwayat_kunjungan = mysqli_query($conn, "SELECT k.id_kunjungan, k.tanggal_kunju
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="kunjungan/followup.php">Input Follow-up Pasien</a></li>
             <li><a class="dropdown-item" href="kunjungan/histori_followup.php">History Pasien</a></li>
+            <li><a class="dropdown-item" href="kunjungan/pasca_cuti.php">Pasien Pasca Cuti</a></li>
+
             
           </ul>
         </li>
