@@ -14,7 +14,6 @@ function hasTable($conn, $table) {
     return ($q && mysqli_num_rows($q) > 0);
 }
 
-// cek struktur
 $has_id_diagnosa = hasColumn($conn, 'kunjungan', 'id_diagnosa');
 $has_diagnosa_text = hasColumn($conn, 'kunjungan', 'diagnosa');
 $has_table_diagnosa = hasTable($conn, 'diagnosa');
