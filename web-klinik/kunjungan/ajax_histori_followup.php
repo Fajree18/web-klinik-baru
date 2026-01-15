@@ -202,8 +202,7 @@ while ($k = mysqli_fetch_assoc($kunjungan)) {
         <td><ul class='mb-0'>";
 
     $id_kunjungan = (int)$k['id_kunjungan'];
-    $resep = mysqli_query($conn, "
-        SELECT o.nama_obat, r.dosis, r.jumlah
+    $resep = mysqli_query($conn, "SELECT o.nama_obat, r.dosis, r.jumlah
         FROM resep r
         JOIN obat o ON o.kode_obat = r.kode_obat
         WHERE r.id_kunjungan = '$id_kunjungan'

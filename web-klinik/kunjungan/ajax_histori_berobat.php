@@ -19,6 +19,9 @@ $has_id_diagnosa = hasColumn($conn, 'kunjungan', 'id_diagnosa');
 $has_diagnosa_text = hasColumn($conn, 'kunjungan', 'diagnosa');
 $has_table_diagnosa = hasTable($conn, 'diagnosa');
 
+// kolom keterangan (punya kamu: keterangan_followup)
+$has_keterangan = hasColumn($conn, 'kunjungan', 'keterangan_followup');
+
 // ====== AMBIL DATA PASIEN ======
 $p = mysqli_query($conn, "SELECT * FROM pasien WHERE id_pasien = '$id_pasien'");
 if (!$p || mysqli_num_rows($p) == 0) {
@@ -61,9 +64,6 @@ echo '
 ';
 
 // ====== RIWAYAT KUNJUNGAN ======
-// diagnosa tampil:
-// - kalau ada id_diagnosa + tabel diagnosa => tampil nama_diagnosa
-// - kalau tidak => tampil k.diagnosa (text) jika ada
 $selectDiagnosa = "'-' AS diagnosa_tampil";
 $joinDiagnosa = "";
 
@@ -74,14 +74,17 @@ if ($has_id_diagnosa && $has_table_diagnosa) {
     $selectDiagnosa = "COALESCE(k.diagnosa, '-') AS diagnosa_tampil";
 }
 
-$kunjungan = mysqli_query($conn, "
-    SELECT 
+// keterangan
+$selectKeterangan = $has_keterangan ? "COALESCE(k.keterangan_followup,'') AS keterangan_followup" : "'' AS keterangan_followup";
+
+$kunjungan = mysqli_query($conn, "SELECT 
         k.id_kunjungan,
         k.tanggal_kunjungan,
         k.status_kunjungan,
         k.tindakan,
         k.istirahat,
-        $selectDiagnosa
+        $selectDiagnosa,
+        $selectKeterangan
     FROM kunjungan k
     $joinDiagnosa
     WHERE k.id_pasien = '$id_pasien'
@@ -109,11 +112,19 @@ echo "<h5 class='mt-4'>Riwayat Kunjungan</h5>
     <th>Tindakan</th>
     <th>Istirahat</th>
     <th>Obat + Dosis</th>
+    <th>Keterangan</th>
 </tr>
 </thead>
 <tbody>";
 
 while ($k = mysqli_fetch_assoc($kunjungan)) {
+    $id_kunjungan = (int)$k['id_kunjungan'];
+
+    // tampilkan keterangan hanya untuk pasca cuti (kalau mau untuk followup juga, tinggal tambah || $k['status_kunjungan']=='followup')
+    $ketTampil = ($k['status_kunjungan'] === 'pasca_cuti')
+        ? trim($k['keterangan_followup'])
+        : '';
+
     echo "<tr>
         <td>" . date('d M Y H:i', strtotime($k['tanggal_kunjungan'])) . "</td>
         <td><span class='badge bg-info'>" . ucfirst($k['status_kunjungan']) . "</span></td>
@@ -122,20 +133,21 @@ while ($k = mysqli_fetch_assoc($kunjungan)) {
         <td>" . (int)($k['istirahat'] ?? 0) . " hari</td>
         <td><ul class='mb-0'>";
 
-    $id_kunjungan = (int)$k['id_kunjungan'];
-    $resep = mysqli_query($conn, "
-        SELECT o.nama_obat, r.dosis, r.jumlah 
+    $resep = mysqli_query($conn, "SELECT o.nama_obat, r.dosis, r.jumlah 
         FROM resep r 
         JOIN obat o ON o.kode_obat = r.kode_obat 
         WHERE r.id_kunjungan = $id_kunjungan
     ");
+
     if ($resep) {
         while ($r = mysqli_fetch_assoc($resep)) {
             echo "<li>" . htmlspecialchars($r['nama_obat']) . " - " . htmlspecialchars($r['dosis']) . " (" . (int)$r['jumlah'] . ")</li>";
         }
     }
 
-    echo "</ul></td></tr>";
+    echo "</ul></td>
+        <td>" . ($ketTampil !== '' ? nl2br(htmlspecialchars($ketTampil)) : '-') . "</td>
+    </tr>";
 }
 
 echo "</tbody></table></div>";
