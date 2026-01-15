@@ -133,7 +133,6 @@ $list = mysqli_query($conn, "SELECT
                     </div>
                 </td>
                 <td class="text-nowrap">
-                    <a href="edit_kunjungan.php?id_kunjungan=<?= (int)$r['id_kunjungan'] ?>" class="btn btn-warning btn-sm">Edit</a>
                     <a href="hapus_kunjungan.php?id_kunjungan=<?= (int)$r['id_kunjungan'] ?>"
                        class="btn btn-danger btn-sm"
                        onclick="return confirm('Hapus kunjungan pasca cuti ini?')">Hapus</a>
