@@ -8,10 +8,10 @@ include "../koneksi.php";
 
 // Sorting
 $allowed_sorts = [
-    'tanggal' => 'k.tanggal_kunjungan',
-    'nama' => 'p.nama',
-    'no_rm' => 'p.no_rm',
-    'status' => 'k.status_kunjungan',
+    'tanggal'   => 'k.tanggal_kunjungan',
+    'nama'      => 'p.nama',
+    'no_rm'     => 'p.no_rm',
+    'status'    => 'k.status_kunjungan',
     'istirahat' => 'k.istirahat'
 ];
 $sort_key = $_GET['sort_by'] ?? 'tanggal';
@@ -21,16 +21,26 @@ $sort_column = $allowed_sorts[$sort_key] ?? $allowed_sorts['tanggal'];
 $per_page = 20;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
+
 $offset = ($page - 1) * $per_page;
 
 // Hitung total data
 $count_result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM kunjungan");
-$total_rows = mysqli_fetch_assoc($count_result)['total'];
-$total_pages = ceil($total_rows / $per_page);
+if (!$count_result) {
+    die("Query count gagal: " . mysqli_error($conn));
+}
+$total_rows = (int)mysqli_fetch_assoc($count_result)['total'];
+$total_pages = (int)ceil($total_rows / $per_page);
+if ($total_pages < 1) $total_pages = 1;
+
+// Guard page biar gak lewat total_pages
+if ($page > $total_pages) {
+    $page = $total_pages;
+    $offset = ($page - 1) * $per_page;
+}
 
 // Query data dengan limit dan offset
-$kunjungan = mysqli_query($conn, "
-    SELECT 
+$kunjungan = mysqli_query($conn, "SELECT 
         k.id_kunjungan, k.tanggal_kunjungan, k.keluhan, k.diagnosa, 
         k.tindakan, k.istirahat, k.status_kunjungan, p.nama, p.no_rm
     FROM kunjungan k
@@ -38,6 +48,14 @@ $kunjungan = mysqli_query($conn, "
     ORDER BY $sort_column DESC
     LIMIT $per_page OFFSET $offset
 ");
+if (!$kunjungan) {
+    die("Query kunjungan gagal: " . mysqli_error($conn));
+}
+
+// Helper buat bikin URL pagination yang tetap bawa sort_by
+function pageUrl($pageNum, $sort_key) {
+    return "?page=" . urlencode($pageNum) . "&sort_by=" . urlencode($sort_key);
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -54,6 +72,7 @@ $kunjungan = mysqli_query($conn, "
         .table-compact th { white-space: nowrap; }
         .badge-status { font-size: 12px; padding: 4px 8px; }
         .btn-sm { font-size: 12px; padding: 4px 8px; }
+        .pagination { flex-wrap: wrap; gap: 2px; }
     </style>
 </head>
 <body class="container mt-4">
@@ -87,9 +106,22 @@ $kunjungan = mysqli_query($conn, "
         </tr>
     </thead>
     <tbody>
+        <?php if (mysqli_num_rows($kunjungan) == 0): ?>
+            <tr>
+                <td colspan="10" class="text-center text-muted">Belum ada data kunjungan.</td>
+            </tr>
+        <?php endif; ?>
+
         <?php while ($row = mysqli_fetch_assoc($kunjungan)): ?>
+        <?php $id_kunjungan = (int)$row['id_kunjungan']; ?>
         <tr>
-            <td><?= htmlspecialchars($row['tanggal_kunjungan']) ?></td>
+            <td>
+                <?php
+                // biar tampil rapi: 2026-01-14 00:24:28 -> 14 Jan 2026 00:24
+                $tgl = $row['tanggal_kunjungan'];
+                echo htmlspecialchars(date('d M Y H:i', strtotime($tgl)));
+                ?>
+            </td>
             <td><?= htmlspecialchars($row['no_rm']) ?></td>
             <td><?= htmlspecialchars($row['nama']) ?></td>
             <td><?= htmlspecialchars($row['keluhan']) ?></td>
@@ -98,18 +130,18 @@ $kunjungan = mysqli_query($conn, "
             <td><?= (int)$row['istirahat'] ?> hr</td>
             <td>
                 <?php
-                $id_kunjungan = $row['id_kunjungan'];
                 $items = [];
-                $resep = mysqli_query($conn, "
-                    SELECT o.nama_obat, r.dosis, r.jumlah 
-                    FROM resep r 
-                    JOIN obat o ON o.kode_obat = r.kode_obat 
+                $resep = mysqli_query($conn, "SELECT o.nama_obat, r.dosis, r.jumlah
+                    FROM resep r
+                    JOIN obat o ON o.kode_obat = r.kode_obat
                     WHERE r.id_kunjungan = '$id_kunjungan'
                 ");
-                while ($r = mysqli_fetch_assoc($resep)) {
-                    $items[] = htmlspecialchars($r['nama_obat']) . " (" . htmlspecialchars($r['dosis']) . ")";
+                if ($resep) {
+                    while ($r = mysqli_fetch_assoc($resep)) {
+                        $items[] = htmlspecialchars($r['nama_obat']) . " (" . htmlspecialchars($r['dosis']) . ")";
+                    }
                 }
-                echo implode("<br>", $items);
+                echo !empty($items) ? implode("<br>", $items) : "<span class='text-muted'>-</span>";
                 ?>
             </td>
             <td><span class="badge bg-info badge-status"><?= ucfirst($row['status_kunjungan']) ?></span></td>
@@ -123,19 +155,37 @@ $kunjungan = mysqli_query($conn, "
     </tbody>
 </table>
 
-<!-- Pagination -->
+<!-- Pagination: tampil maksimal 10 nomor -->
+<?php
+$max_links = 10;
+$half = (int)floor($max_links / 2);
+
+$start = max(1, $page - $half);
+$end   = min($total_pages, $start + $max_links - 1);
+
+// kalau jumlah link kurang dari max_links, geser start ke kiri
+if (($end - $start + 1) < $max_links) {
+    $start = max(1, $end - $max_links + 1);
+}
+
+$prev_page = max(1, $page - 1);
+$next_page = min($total_pages, $page + 1);
+?>
+
 <nav aria-label="Pagination" class="mt-3">
     <ul class="pagination">
         <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-            <a class="page-link" href="?page=<?= $page - 1 ?>&sort_by=<?= urlencode($sort_key) ?>">« Sebelumnya</a>
+            <a class="page-link" href="<?= $page <= 1 ? '#' : pageUrl($prev_page, $sort_key) ?>">« Sebelumnya</a>
         </li>
-        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+
+        <?php for ($i = $start; $i <= $end; $i++): ?>
             <li class="page-item <?= $page == $i ? 'active' : '' ?>">
-                <a class="page-link" href="?page=<?= $i ?>&sort_by=<?= urlencode($sort_key) ?>"><?= $i ?></a>
+                <a class="page-link" href="<?= pageUrl($i, $sort_key) ?>"><?= $i ?></a>
             </li>
         <?php endfor; ?>
+
         <li class="page-item <?= $page >= $total_pages ? 'disabled' : '' ?>">
-            <a class="page-link" href="?page=<?= $page + 1 ?>&sort_by=<?= urlencode($sort_key) ?>">Berikutnya »</a>
+            <a class="page-link" href="<?= $page >= $total_pages ? '#' : pageUrl($next_page, $sort_key) ?>">Berikutnya »</a>
         </li>
     </ul>
 </nav>

@@ -7,6 +7,9 @@ if (!isset($_SESSION['admin'])) {
 include "../koneksi.php";
 
 $pasien = mysqli_query($conn, "SELECT id_pasien, nama, jabatan FROM pasien ORDER BY nama ASC");
+if (!$pasien) {
+    die("Query pasien gagal: " . mysqli_error($conn));
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -25,16 +28,17 @@ $pasien = mysqli_query($conn, "SELECT id_pasien, nama, jabatan FROM pasien ORDER
         <div class="row g-3 align-items-end">
             <div class="col-md-6">
                 <label class="form-label">Scan Barcode (Format: NIK|Nama|Jabatan)</label>
-                <input type="text" id="barcode_input" class="form-control" 
-                       oninput="cariDariBarcode(this.value)" placeholder="Contoh: MLP.001|Andi|Admin GA" autofocus>
+                <input type="text" id="barcode_input" class="form-control"
+                       oninput="cariDariBarcode(this.value)"
+                       placeholder="Contoh: MLP.001|Andi|Admin GA" autofocus>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Atau Pilih Pasien Manual</label>
                 <select id="select_pasien" class="form-select" onchange="cariDariDropdown(this.value)">
                     <option value="">-- Pilih Pasien --</option>
                     <?php while($row = mysqli_fetch_assoc($pasien)): ?>
-                        <option value="<?= $row['id_pasien'] ?>">
-                            <?= htmlspecialchars($row['nama']) ?> (<?= $row['id_pasien'] ?> | <?= $row['jabatan'] ?>)
+                        <option value="<?= htmlspecialchars($row['id_pasien']) ?>">
+                            <?= htmlspecialchars($row['nama']) ?> (<?= htmlspecialchars($row['id_pasien']) ?> | <?= htmlspecialchars($row['jabatan'] ?? '-') ?>)
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -52,15 +56,40 @@ $pasien = mysqli_query($conn, "SELECT id_pasien, nama, jabatan FROM pasien ORDER
 </div>
 
 <script>
+let barcodeTimer = null;
+
 function cariDariBarcode(barcode) {
-    if (barcode.length > 5) {
-        const nik = barcode.split('|')[0].trim(); 
-        kirimPermintaan(nik);
-    }
+    // debounce biar gak nembak request tiap karakter
+    clearTimeout(barcodeTimer);
+
+    barcodeTimer = setTimeout(() => {
+        if (!barcode) return;
+
+        // ambil bagian sebelum "|"
+        const nik = barcode.split('|')[0].trim();
+
+        // minimal 3 karakter biar gak random
+        if (nik.length >= 3) {
+            // set dropdown juga biar sinkron (kalau ada)
+            const select = document.getElementById("select_pasien");
+            if (select) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === nik) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            kirimPermintaan(nik);
+        }
+    }, 250);
 }
 
 function cariDariDropdown(id_pasien) {
     if (id_pasien !== "") {
+        // kosongin input barcode biar gak bentrok
+        const barcodeInput = document.getElementById("barcode_input");
+        if (barcodeInput) barcodeInput.value = "";
         kirimPermintaan(id_pasien);
     } else {
         document.getElementById("hasil_histori").innerHTML = "";
@@ -74,9 +103,7 @@ function kirimPermintaan(id_pasien) {
         data: { id_pasien: id_pasien },
         success: function(response) {
             document.getElementById("hasil_histori").innerHTML = response;
-
-            // Tambahkan section MCU otomatis
-            tampilkanMCU(id_pasien);
+            // MCU sudah included di response ajax, jadi gak perlu panggil function lain
         },
         error: function() {
             document.getElementById("hasil_histori").innerHTML =
@@ -84,7 +111,6 @@ function kirimPermintaan(id_pasien) {
         }
     });
 }
-
 </script>
 
 </body>
