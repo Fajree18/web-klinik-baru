@@ -5,6 +5,9 @@ if (!isset($_SESSION['admin'])) {
     exit;
 }
 
+date_default_timezone_set('Asia/Makassar');
+$waktu_input = date('Y-m-d H:i:s');
+
 include "../koneksi.php";
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -118,21 +121,18 @@ if (is_array($obat_arr) && is_array($dosis_arr) && is_array($jumlah_arr)) {
         $dosis_safe     = mysqli_real_escape_string($conn, $dosis);
 
         // Insert resep
-        mysqli_query($conn, "
-            INSERT INTO resep (id_kunjungan, kode_obat, dosis, jumlah)
+        mysqli_query($conn, "INSERT INTO resep (id_kunjungan, kode_obat, dosis, jumlah)
             VALUES ($id_kunjungan, '$kode_obat_safe', '$dosis_safe', $jumlah)
         ");
 
         // Kurangi stok
-        mysqli_query($conn, "
-            UPDATE obat
+        mysqli_query($conn, "UPDATE obat
             SET stok = stok - $jumlah
             WHERE kode_obat = '$kode_obat_safe'
         ");
 
         // Log stok keluar
-        mysqli_query($conn, "
-            INSERT INTO stok_log (kode_obat, tipe, jumlah, tanggal, id_kunjungan)
+        mysqli_query($conn, "INSERT INTO stok_log (kode_obat, tipe, jumlah, tanggal, id_kunjungan)
             VALUES ('$kode_obat_safe', 'keluar', $jumlah, NOW(), $id_kunjungan)
         ");
     }

@@ -41,15 +41,15 @@ $riwayat_kunjungan = mysqli_query($conn, "SELECT k.id_kunjungan, k.tanggal_kunju
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle fw-bold text-white" href="#" role="button" data-bs-toggle="dropdown">Kunjungan</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="kunjungan/tambah.php">Input Kunjungan Pasien</a></li>
-            <li><a class="dropdown-item" href="kunjungan/daftar_kunjungan.php">Edit dan Print Surat</a></li>
+           <li><a class="dropdown-item" href="kunjungan/tambah.php">Input Kunjungan Pasien</a></li>
+          <li><a class="dropdown-item" href="kunjungan/followup.php">Input Follow-up Pasien</a></li> 
+           <li><a class="dropdown-item" href="kunjungan/daftar_kunjungan.php">Edit dan Print Surat</a></li>
           </ul>
         </li>
 
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle fw-bold text-white" href="#" role="button" data-bs-toggle="dropdown">History</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="kunjungan/followup.php">Input Follow-up Pasien</a></li>
             <li><a class="dropdown-item" href="kunjungan/histori_followup.php">History Pasien</a></li>
             <li><a class="dropdown-item" href="kunjungan/pasca_cuti.php">Pasien Pasca Cuti</a></li>
 

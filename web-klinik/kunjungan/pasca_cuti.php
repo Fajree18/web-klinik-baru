@@ -27,8 +27,7 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $per_page;
 
 // total rows
-$qTotal = mysqli_query($conn, "
-    SELECT COUNT(*) AS total
+$qTotal = mysqli_query($conn, "SELECT COUNT(*) AS total
     FROM kunjungan k
     JOIN pasien p ON p.id_pasien = k.id_pasien
     $where

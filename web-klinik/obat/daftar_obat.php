@@ -171,6 +171,7 @@ $query = mysqli_query($conn, $sql);
     <th class="nowrap">Masuk Terakhir</th>
     <th class="nowrap">Keluar Terakhir</th>
     <th class="nowrap">Aksi</th>
+    
 </tr>
 </thead>
 <tbody>
@@ -200,8 +201,9 @@ $query = mysqli_query($conn, $sql);
     <td class="nowrap"><?= !empty($d['tanggal_keluar']) ? date('d-m-Y H:i', strtotime($d['tanggal_keluar'])) : '-' ?></td>
 
     <td class="nowrap">
-        <a href="edit_obat.php?kode_obat=<?= urlencode($d['kode_obat']) ?>" class="btn btn-warning btn-sm">Edit</a>
-    </td>
+    <a href="edit_obat.php?kode_obat=<?= urlencode($d['kode_obat']) ?>" class="btn btn-warning btn-sm">Edit</a>
+    <a href="tambah_stok.php?kode_obat=<?= urlencode($d['kode_obat']) ?>" class="btn btn-success btn-sm">+ Stok</a>
+</td>
 </tr>
 <?php endwhile; ?>
 <?php endif; ?>
